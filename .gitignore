@@ -1,0 +1,13 @@
+# Исключаем папку с большими данными
+data/
+
+# Исключаем виртуальное окружение и кэш Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Исключаем артефакты PyCharm / VSCode / Dayton
+.idea/
+.vscode/
+*.swp

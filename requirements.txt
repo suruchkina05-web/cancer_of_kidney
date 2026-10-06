@@ -1,0 +1,7 @@
+torch
+torchvision
+openslide-python
+opencv-python
+pandas
+numpy
+pillow
