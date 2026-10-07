@@ -49,7 +49,8 @@ class RCCMetadataDataset:
 
 if __name__ == "__main__":
     # Простой тест работы класса
-    dataset = RCCMetadataDataset(csv_file="data/metadata.csv", split="train")
+    ROOT = Path(__file__).resolve().parent.parent
+    dataset = RCCMetadataDataset(csv_file=ROOT / "data" / "metadata.csv", split="train")
     print(f"✅ В выборке '{dataset.split}' найдено {len(dataset)} слайдов.")
     if len(dataset) > 0:
         print(f"📄 Пример первого элемента: {dataset[0]}")
