@@ -50,3 +50,19 @@ def save_figure(path, thumb, overlay, top_patches, title, probs_text):
     fig.suptitle(f"{title}\n{probs_text}", fontsize=11)
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+
+def scatter_map(coords, attn, region):
+    """Быстрая карта внимания БЕЗ скана: патчи в своих координатах, цвет = ранг важности.
+    Возвращает изображение RGB (numpy)."""
+    coords = np.asarray(coords)
+    rank = np.argsort(np.argsort(attn)) / max(len(attn) - 1, 1)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.scatter(coords[:, 0], coords[:, 1], c=rank, cmap="magma", marker="s",
+               s=max(2, 3000 / max(len(coords) ** 0.5, 1)), linewidths=0)
+    ax.invert_yaxis(); ax.set_aspect("equal"); ax.axis("off")
+    ax.set_title("Карта внимания (светлее = важнее)")
+    fig.canvas.draw()
+    img = np.asarray(fig.canvas.buffer_rgba())[:, :, :3].copy()
+    plt.close(fig)
+    return img
