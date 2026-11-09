@@ -1,0 +1,2 @@
+slide_id,patient_id,tss_code,subtype_label,subtype_name,isup_grade,split,features_file
+TCGA-A3-3336-01Z-00-DX1,TCGA-A3-3336,A3,1,ccRCC,,pending,TCGA-A3-3336-01Z-00-DX1_features.npy
