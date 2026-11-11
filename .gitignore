@@ -20,3 +20,10 @@ __pycache__/
 *.npy
 # Служебный файл macOS
 .DS_Store
+
+# Сгенерированные папки демо (воспроизводятся командами src.export_demo и src.build_static)
+demo_data/
+static_site/
+static_site2/
+site_deploy/
+site_single/
