@@ -110,11 +110,9 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
     encoder = load_encoder(device)
-    stain = None
     if args.stain_norm:
         from src.stain import MacenkoNormalizer
-        stain = MacenkoNormalizer()
-        print("Нормализация окраски: Макенко")
+        print("Нормализация окраски: Макенко (красители оцениваются один раз на срез)")
 
     done, skipped, failed = 0, 0, []
     for mpath in args.manifests:
@@ -134,6 +132,11 @@ def main():
                 slide = open_slide(svs)
                 coords, region = find_tissue_coords(slide, args.patch_size)
                 print(f"  патчей с тканью: {len(coords)}")
+                stain = None
+                if args.stain_norm:
+                    stain = MacenkoNormalizer()
+                    if not stain.fit_source_from_slide(slide, coords, region, args.patch_size):
+                        print("  предупреждение: красители среза не оценены, нормализация по каждому патчу")
                 feats = extract_features(slide, coords, region, encoder, device, args.patch_size, stain=stain)
                 np.save(feat_path, feats)
                 np.save(out_dir / f"{name}_coords.npy", np.array(coords))

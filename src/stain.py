@@ -24,6 +24,8 @@ class MacenkoNormalizer:
         self.min_tissue_pixels = min_tissue_pixels
         self.he_ref = HE_REF.copy() if he_ref is None else np.asarray(he_ref, float)
         self.maxc_ref = MAXC_REF.copy() if maxc_ref is None else np.asarray(maxc_ref, float)
+        self.he_src = None      # красители среза (если заданы, оцениваются один раз на срез, а не на каждый патч)
+        self.maxc_src = None
 
     # --- вспомогательные шаги ---
     def _od(self, arr):
@@ -66,19 +68,50 @@ class MacenkoNormalizer:
         self.maxc_ref = np.percentile(c, 99, axis=1)
         return self
 
+    def fit_source(self, patches, max_pixels=2_000_000, seed=0):
+        """Оценить красители СРЕЗА по набору его патчей. После этого все патчи среза нормализуются одной
+        и той же матрицей, и патчи с кровью или почти без ядер не искажаются. Возвращает True, если получилось."""
+        ods = [self._od(np.asarray(p.convert("RGB") if hasattr(p, "convert") else p)) for p in patches]
+        if not ods:
+            return False
+        od = np.concatenate(ods)
+        if len(od) > max_pixels:
+            od = od[np.random.default_rng(seed).choice(len(od), max_pixels, replace=False)]
+        he = self._stain_matrix(od)
+        if he is None:
+            return False
+        c = np.linalg.pinv(he) @ od.T
+        maxc = np.percentile(c, 99, axis=1)
+        if np.any(maxc <= 1e-6) or not np.all(np.isfinite(maxc)):
+            return False
+        self.he_src, self.maxc_src = he, maxc
+        return True
+
+    def fit_source_from_slide(self, slide, coords, region, patch_size=256, n=64, seed=0):
+        """Взять n случайных патчей среза и оценить по ним красители среза."""
+        from src.wsi import read_patch
+        rng = np.random.default_rng(seed)
+        idx = rng.choice(len(coords), size=min(n, len(coords)), replace=False)
+        patches = [read_patch(slide, int(coords[i][0]), int(coords[i][1]), region, patch_size) for i in idx]
+        return self.fit_source(patches, seed=seed)
+
     def normalize_array(self, arr):
         """arr: (H, W, 3) uint8 -> нормализованный (H, W, 3) uint8. Негодные патчи возвращаются без изменений."""
         arr = np.asarray(arr)
         h, w, _ = arr.shape
         try:
             od = self._od(arr)
-            he = self._stain_matrix(od)
-            if he is None:
-                return arr
-            c = np.linalg.pinv(he) @ od.T                      # концентрации красителей, (2, N)
-            maxc = np.percentile(c, 99, axis=1)
-            if np.any(maxc <= 1e-6) or not np.all(np.isfinite(maxc)):
-                return arr
+            if self.he_src is not None:                        # красители заданы для всего среза
+                he, maxc = self.he_src, self.maxc_src
+                c = np.linalg.pinv(he) @ od.T
+            else:                                              # запасной вариант: оценка по самому патчу
+                he = self._stain_matrix(od)
+                if he is None:
+                    return arr
+                c = np.linalg.pinv(he) @ od.T                  # концентрации красителей, (2, N)
+                maxc = np.percentile(c, 99, axis=1)
+                if np.any(maxc <= 1e-6) or not np.all(np.isfinite(maxc)):
+                    return arr
             c = c / (maxc / self.maxc_ref)[:, None]
             out = self.io * np.exp(-(self.he_ref @ c))
             out = np.clip(out.T.reshape(h, w, 3), 0, 255).astype(np.uint8)

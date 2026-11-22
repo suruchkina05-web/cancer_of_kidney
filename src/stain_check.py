@@ -55,7 +55,6 @@ def main():
     for m in a.manifests:
         for it in read_manifest(m):
             items[slide_name(it["filename"])] = it
-    stain = MacenkoNormalizer()
     rng = random.Random(a.seed)
     work = Path(a.work); work.mkdir(parents=True, exist_ok=True)
     rows = []
@@ -68,6 +67,8 @@ def main():
             download(items[sid]["id"], svs)
             slide = open_slide(svs)
             coords, region = find_tissue_coords(slide, a.patch_size, min_tissue_ratio=0.9)
+            stain = MacenkoNormalizer()      # красители оцениваются по срезу, как при настоящей обработке
+            print("  красители среза оценены:", stain.fit_source_from_slide(slide, coords, region, a.patch_size))
             pick = rng.sample(coords, min(a.n, len(coords)))
             before = [np.array(read_patch(slide, x, y, region, a.patch_size)) for x, y in pick]
             after = [stain(p) for p in before]
