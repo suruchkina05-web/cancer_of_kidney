@@ -27,3 +27,6 @@ static_site/
 static_site2/
 site_deploy/
 site_single/
+
+# Полные манифесты GDC (большие, не нужны в Git)
+data/gdc_all/
