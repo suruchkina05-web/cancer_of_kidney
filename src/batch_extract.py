@@ -96,6 +96,8 @@ def main():
     parser.add_argument("--limit", type=int, default=None,
                         help="обработать только первые N срезов каждого манифеста (для проверки)")
     parser.add_argument("--patch-size", type=int, default=256)
+    parser.add_argument("--stain-norm", action="store_true",
+                        help="нормализация окраски по Макенко (признаки лучше складывать в отдельную папку --out)")
     args = parser.parse_args()
 
     import torch
@@ -108,6 +110,11 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
     encoder = load_encoder(device)
+    stain = None
+    if args.stain_norm:
+        from src.stain import MacenkoNormalizer
+        stain = MacenkoNormalizer()
+        print("Нормализация окраски: Макенко")
 
     done, skipped, failed = 0, 0, []
     for mpath in args.manifests:
@@ -127,7 +134,7 @@ def main():
                 slide = open_slide(svs)
                 coords, region = find_tissue_coords(slide, args.patch_size)
                 print(f"  патчей с тканью: {len(coords)}")
-                feats = extract_features(slide, coords, region, encoder, device, args.patch_size)
+                feats = extract_features(slide, coords, region, encoder, device, args.patch_size, stain=stain)
                 np.save(feat_path, feats)
                 np.save(out_dir / f"{name}_coords.npy", np.array(coords))
                 print(f"  готово: {feats.shape}")

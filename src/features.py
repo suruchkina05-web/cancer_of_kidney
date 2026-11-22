@@ -17,8 +17,10 @@ def load_encoder(device="cpu"):
 
 
 def extract_features(slide, coords, region, encoder, device="cpu",
-                     patch_size=256, batch_size=32):
-    """Возвращает массив размера (число патчей, 2048)."""
+                     patch_size=256, batch_size=32, stain=None):
+    """Возвращает массив размера (число патчей, 2048).
+
+    stain - необязательная функция нормализации окраски патча (например, MacenkoNormalizer из src/stain.py)."""
     import torch
     from torchvision import transforms
     from tqdm import tqdm
@@ -30,9 +32,9 @@ def extract_features(slide, coords, region, encoder, device="cpu",
     result = []
     with torch.no_grad():
         for i in tqdm(range(0, len(coords), batch_size)):
-            batch = torch.stack([
-                prep(read_patch(slide, x, y, region, patch_size))
-                for x, y in coords[i:i + batch_size]
-            ]).to(device)
+            patches = [read_patch(slide, x, y, region, patch_size) for x, y in coords[i:i + batch_size]]
+            if stain is not None:
+                patches = [stain(p) for p in patches]
+            batch = torch.stack([prep(p) for p in patches]).to(device)
             result.append(encoder(batch).cpu().numpy())
     return np.concatenate(result)

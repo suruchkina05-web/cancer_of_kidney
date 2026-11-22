@@ -32,6 +32,10 @@ def build(args):
     model.load_state_dict(torch.load(args.model, map_location="cpu"))
     model.eval()
     encoder = load_encoder(device)
+    stain = None
+    if args.stain_norm:  # должно совпадать с тем, как считались признаки при обучении модели
+        from src.stain import MacenkoNormalizer
+        stain = MacenkoNormalizer()
 
     def predict(file, max_patches, progress=gr.Progress()):
         if file is None:
@@ -47,7 +51,7 @@ def build(args):
             idx = np.sort(np.random.default_rng(0).choice(len(coords), int(max_patches), replace=False))
             coords = [coords[i] for i in idx]
         progress(0.2, desc=f"Считаю признаки по {len(coords)} патчам")
-        feats = extract_features(slide, coords, region, encoder, device, args.patch_size)
+        feats = extract_features(slide, coords, region, encoder, device, args.patch_size, stain=stain)
         progress(0.8, desc="Запускаю модель")
         with torch.no_grad():
             logits, att = model(torch.from_numpy(np.asarray(feats)).float())
@@ -84,6 +88,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--patch-size", type=int, default=256)
+    ap.add_argument("--stain-norm", action="store_true", help="нормализация Макенко (если модель обучена на нормализованных признаках)")
     a = ap.parse_args()
     build(a).launch(share=True)
 
