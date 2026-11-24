@@ -1,0 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+gradio
+openslide-python
+openslide-bin
+opencv-python-headless
+pandas
+numpy
+pillow
+tqdm
+matplotlib
+scikit-learn
